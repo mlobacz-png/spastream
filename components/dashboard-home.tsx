@@ -89,7 +89,7 @@ export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => voi
     const todayAppointments = appointments.filter(apt => isToday(new Date(apt.start_time)));
     const upcomingAppointments = appointments.filter(apt => new Date(apt.start_time) > now);
 
-    const recentActivity = appointments 
+    const recentActivity = appointments
       .filter(apt => new Date(apt.start_time) <= now)
       .slice(-5)
       .reverse()

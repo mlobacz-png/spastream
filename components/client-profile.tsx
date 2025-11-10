@@ -189,7 +189,7 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0" style={{ backgroundColor: 'yellow', padding: '10px' }}>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
               <Button
                 variant="destructive"
                 onClick={() => {
@@ -198,10 +198,9 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
                 }}
                 className="rounded-full"
                 data-test-delete-button="true"
-                style={{ backgroundColor: 'red', color: 'white', minWidth: '150px', fontSize: '16px', fontWeight: 'bold' }}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                DELETE CLIENT
+                Delete
               </Button>
               <Button
                 variant="outline"
@@ -410,17 +409,9 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Client</AlertDialogTitle>
+            <AlertDialogTitle>Delete {client.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{client.name}</strong>? This will permanently remove all their data including:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Contact information</li>
-                <li>Treatment history ({client.treatments?.length || 0} treatments)</li>
-                <li>Notes ({client.notes?.length || 0} notes)</li>
-                <li>Photos ({photos.length} photos)</li>
-                <li>Portal access</li>
-              </ul>
-              <p className="mt-3 font-semibold">This action cannot be undone.</p>
+              This will permanently delete all data for this client. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -432,7 +423,7 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
               disabled={deleting}
               className="rounded-full bg-red-600 hover:bg-red-700 text-white"
             >
-              {deleting ? 'Deleting...' : 'Delete Client'}
+              {deleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

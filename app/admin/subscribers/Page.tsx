@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { Users, DollarSign, TrendingUp, Download, ArrowLeft } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Download, ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface Subscription {
@@ -71,6 +71,33 @@ export default function SubscribersPage() {
       console.error('Error fetching subscriptions:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function deleteSubscription(subscriptionId: string) {
+    if (!confirm('Are you sure you want to delete this subscription? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .delete()
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+
+      setSubscriptions(subscriptions.filter(sub => sub.id !== subscriptionId));
+
+      setStats(prev => ({
+        total: prev.total - 1,
+        active: prev.active - (subscriptions.find(s => s.id === subscriptionId)?.status === 'active' ? 1 : 0),
+        trialing: prev.trialing - (subscriptions.find(s => s.id === subscriptionId)?.status === 'trialing' ? 1 : 0),
+        mrr: prev.mrr - (subscriptions.find(s => s.id === subscriptionId)?.plan?.price || 0),
+      }));
+    } catch (error) {
+      console.error('Error deleting subscription:', error);
+      alert('Failed to delete subscription');
     }
   }
 
@@ -186,6 +213,7 @@ export default function SubscribersPage() {
                   <TableHead>Trial Ends</TableHead>
                   <TableHead>Current Period</TableHead>
                   <TableHead>Signed Up</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -224,6 +252,16 @@ export default function SubscribersPage() {
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
                         {format(new Date(sub.created_at), 'MMM dd, yyyy HH:mm')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteSubscription(sub.id)}
+                          className="hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

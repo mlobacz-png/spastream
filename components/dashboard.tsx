@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardHome } from './dashboard-home';
@@ -18,7 +18,7 @@ import { PaymentSettings } from './payment-settings';
 import { InvoicesSection } from './invoices-section';
 import { SMSSection } from './sms-section';
 import { AnalyticsDashboard } from './analytics-dashboard';
-import { supabase } from '@/lib/supabase';
+import { Bolt Database } from '@/lib/supabase';
 import { getUserSubscription } from '@/lib/subscription-utils';
 import { SpaStreamLogo, SpaStreamLogoWithText } from './spastream-logo';
 import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles } from 'lucide-react';
@@ -27,15 +27,35 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    checkSubscription();
+    const onboarded = searchParams.get('onboarded');
+    if (onboarded === 'true') {
+      // Skip subscription check - they just completed onboarding
+      setCheckingSubscription(false);
+    } else {
+      checkSubscription();
+    }
   }, []);
 
   async function checkSubscription() {
     const subscription = await getUserSubscription();
     if (!subscription) {
-      router.push('/onboarding?step=plan');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: bizInfo } = await Bolt Database
+          .from('business_information')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!bizInfo) {
+          router.push('/onboarding?step=business-info');
+        } else {
+          router.push('/onboarding?step=plan');
+        }
+      }
       return;
     }
     setCheckingSubscription(false);
@@ -56,6 +76,7 @@ export function Dashboard() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    router.push('/');
   };
 
   return (

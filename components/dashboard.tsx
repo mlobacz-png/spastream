@@ -32,7 +32,6 @@ export function Dashboard() {
   useEffect(() => {
     const onboarded = searchParams.get('onboarded');
     if (onboarded === 'true') {
-      // Skip subscription check - they just completed onboarding
       setCheckingSubscription(false);
     } else {
       checkSubscription();
@@ -41,8 +40,10 @@ export function Dashboard() {
 
   async function checkSubscription() {
     const subscription = await getUserSubscription();
+
     if (!subscription) {
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user) {
         const { data: bizInfo } = await Bolt Database
           .from('business_information')

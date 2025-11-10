@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientPhotoUpload } from './client-photo-upload';
 import { ClientPortalAccess } from './client-portal-access';
 import { supabase, Client, Treatment, logAuditEvent } from '@/lib/supabase';
-import { Calendar, FileText, History, X, Plus, User, Image as ImageIcon, Globe } from 'lucide-react';
+import { Calendar, FileText, History, X, Plus, User, Image as ImageIcon, Globe, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ClientProfileProps {
@@ -24,12 +25,15 @@ interface ClientProfileProps {
 }
 
 export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: ClientProfileProps) {
+  console.log('ClientProfile component rendered - VERSION 2.0 WITH DELETE BUTTON');
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [newTreatment, setNewTreatment] = useState({ service: '', notes: '' });
   const [photos, setPhotos] = useState<any[]>([]);
   const [portalAccessOpen, setPortalAccessOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (clientId && open) {
@@ -123,12 +127,40 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
     }
   };
 
+  const deleteClient = async () => {
+    if (!client) return;
+
+    setDeleting(true);
+
+    // Delete client photos from storage first
+    if (photos.length > 0) {
+      const photoPaths = photos.map(photo => photo.storage_path);
+      await supabase.storage.from('client-photos').remove(photoPaths);
+    }
+
+    // Delete client record
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', client.id);
+
+    if (!error) {
+      logAuditEvent('DELETE_CLIENT', client.id, { client_name: client.name });
+      onUpdate();
+      onOpenChange(false);
+    }
+
+    setDeleting(false);
+    setDeleteDialogOpen(false);
+  };
+
   if (!client) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-3xl rounded-2xl">
           <div className="flex items-center justify-center py-12">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 animate-pulse" />
+            <p className="text-2xl font-bold text-red-600 ml-4">LOADING CLIENT DATA...</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -141,28 +173,45 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={client.photo_url || ''} alt={client.name} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white text-2xl">
-                {client.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-light">{client.name}</DialogTitle>
-              <div className="flex items-center gap-3 text-sm text-slate-600 mt-1">
-                {age && <span>{age} years old</span>}
-                {client.phone && <span>• {client.phone}</span>}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <Avatar className="h-16 w-16 flex-shrink-0">
+                <AvatarImage src={client.photo_url || ''} alt={client.name} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white text-2xl">
+                  {client.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-2xl font-light truncate">{client.name}</DialogTitle>
+                <div className="flex items-center gap-3 text-sm text-slate-600 mt-1 flex-wrap">
+                  {age && <span>{age} years old</span>}
+                  {client.phone && <span>• {client.phone}</span>}
+                </div>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setPortalAccessOpen(true)}
-              className="rounded-full"
-            >
-              <Globe className="w-4 h-4 mr-2" />
-              Portal Access
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0" style={{ backgroundColor: 'yellow', padding: '10px' }}>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  console.log('Delete button clicked');
+                  setDeleteDialogOpen(true);
+                }}
+                className="rounded-full"
+                data-test-delete-button="true"
+                style={{ backgroundColor: 'red', color: 'white', minWidth: '150px', fontSize: '16px', fontWeight: 'bold' }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                DELETE CLIENT
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPortalAccessOpen(true)}
+                className="rounded-full"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Portal Access
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -357,6 +406,37 @@ export function ClientProfile({ clientId, open, onOpenChange, onUpdate }: Client
         open={portalAccessOpen}
         onOpenChange={setPortalAccessOpen}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{client.name}</strong>? This will permanently remove all their data including:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Contact information</li>
+                <li>Treatment history ({client.treatments?.length || 0} treatments)</li>
+                <li>Notes ({client.notes?.length || 0} notes)</li>
+                <li>Photos ({photos.length} photos)</li>
+                <li>Portal access</li>
+              </ul>
+              <p className="mt-3 font-semibold">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteClient}
+              disabled={deleting}
+              className="rounded-full bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? 'Deleting...' : 'Delete Client'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

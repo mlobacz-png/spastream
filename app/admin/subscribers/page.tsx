@@ -81,7 +81,7 @@ export default function SubscribersPage() {
 
     try {
       const { error } = await supabase
-        .from('subscriptions')
+        .from('user_subscriptions')
         .delete()
         .eq('id', subscriptionId);
 

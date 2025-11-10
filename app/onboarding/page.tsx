@@ -7,29 +7,87 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Clock, Download, FileText, PlayCircle, Sparkles, Users, CreditCard, MessageSquare, Calendar, UserPlus, Rocket } from "lucide-react";
+import { CheckCircle2, Clock, Download, FileText, PlayCircle, Sparkles, Users, CreditCard, MessageSquare, Calendar, UserPlus, Rocket, Building2, ArrowRight } from "lucide-react";
 import { PlanSelection } from "@/components/plan-selection";
 import { getUserSubscription } from "@/lib/subscription-utils";
+import { BusinessInformationForm } from "@/components/business-information-form";
+import { Bolt Database } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 export default function OnboardingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
+  const [hasBusinessInfo, setHasBusinessInfo] = useState<boolean | null>(null);
   const step = searchParams.get('step');
 
   useEffect(() => {
-    checkSubscription();
-  }, []);
+    console.log('Onboarding - User changed:', { userId: user?.id, step });
+    if (user) {
+      checkSubscription();
+      checkBusinessInfo();
+    } else {
+      // If no user, they haven't completed business info or subscription
+      setHasBusinessInfo(false);
+      setHasSubscription(false);
+    }
+  }, [user]);
 
   async function checkSubscription() {
     const subscription = await getUserSubscription();
+    console.log('Onboarding - checkSubscription:', { hasSubscription: subscription !== null });
     setHasSubscription(subscription !== null);
   }
 
-  if (hasSubscription === null) {
+  async function checkBusinessInfo() {
+    if (!user) return;
+
+    const { data, error } = await Bolt Database
+      .from('business_information')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    console.log('Onboarding - checkBusinessInfo:', { hasBusinessInfo: data !== null, userId: user.id });
+    setHasBusinessInfo(data !== null);
+  }
+
+  if (hasSubscription === null || hasBusinessInfo === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Step 0: Collect business information (ALWAYS show if step=business-info)
+  console.log('Onboarding - Render decision:', { hasBusinessInfo, hasSubscription, step });
+  if (step === 'business-info' || !hasBusinessInfo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+        <div className="border-b bg-white">
+          <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="text-center space-y-2">
+              <Badge className="mb-4" variant="secondary">
+                <Building2 className="w-3 h-3 mr-1" />
+                Welcome to SpaStream
+              </Badge>
+              <h1 className="text-4xl font-bold tracking-tight">Tell Us About Your Business</h1>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Let's start by collecting some basic information about your med spa.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-12 max-w-3xl">
+          <BusinessInformationForm
+            onComplete={() => {
+              setHasBusinessInfo(true);
+              router.push('/onboarding?step=plan');
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -42,7 +100,7 @@ export default function OnboardingPage() {
             <div className="text-center space-y-2">
               <Badge className="mb-4" variant="secondary">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Step 1 of 9
+                Step 2 of 9
               </Badge>
               <h1 className="text-4xl font-bold tracking-tight">Choose Your Plan</h1>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
@@ -54,7 +112,8 @@ export default function OnboardingPage() {
         <div className="container mx-auto px-4 py-12">
           <PlanSelection onComplete={() => {
             setHasSubscription(true);
-            router.push('/onboarding');
+            // Add parameter to skip subscription check since we just created it
+            router.push('/app?onboarded=true');
           }} />
         </div>
       </div>
@@ -71,7 +130,7 @@ export default function OnboardingPage() {
               <Sparkles className="w-3 h-3 mr-1" />
               Getting Started
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight">Welcome to MedSpaFlow</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Welcome to SpaStream</h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
               Get your med spa up and running in under 30 minutes with our comprehensive onboarding guide
             </p>
@@ -90,7 +149,7 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 pt-6">
-              <Button size="lg" onClick={() => router.push('/')}>
+              <Button size="lg" onClick={() => router.push('/app')}>
                 <Rocket className="w-5 h-5 mr-2" />
                 Go to Dashboard
               </Button>
@@ -389,7 +448,7 @@ export default function OnboardingPage() {
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-slate-400 mt-1" />
                     <div>
-                      <p className="font-medium text-sm">Connect to MedSpaFlow</p>
+                      <p className="font-medium text-sm">Connect to SpaStream</p>
                       <p className="text-sm text-slate-600">Paste keys in Payment Settings and test a payment</p>
                     </div>
                   </div>
@@ -758,7 +817,7 @@ export default function OnboardingPage() {
             </div>
             <Separator />
             <div className="text-center space-y-2">
-              <p className="text-sm text-slate-600">Email us at <strong>support@medspaflow.com</strong></p>
+              <p className="text-sm text-slate-600">Email us at <strong>support@spastream.com</strong></p>
               <p className="text-sm text-slate-600">Live chat available Mon-Fri, 9am-5pm EST</p>
               <Button className="mt-4">
                 <Download className="w-4 h-4 mr-2" />

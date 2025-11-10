@@ -18,7 +18,7 @@ import { PaymentSettings } from './payment-settings';
 import { InvoicesSection } from './invoices-section';
 import { SMSSection } from './sms-section';
 import { AnalyticsDashboard } from './analytics-dashboard';
-import { Bolt Database } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { getUserSubscription } from '@/lib/subscription-utils';
 import { SpaStreamLogo, SpaStreamLogoWithText } from './spastream-logo';
 import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles } from 'lucide-react';
@@ -45,7 +45,7 @@ export function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        const { data: bizInfo } = await Bolt Database
+        const { data: bizInfo } = await supabase
           .from('business_information')
           .select('id')
           .eq('user_id', user.id)

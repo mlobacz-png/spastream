@@ -43,7 +43,7 @@ export default function OnboardingPage() {
   async function checkBusinessInfo() {
     if (!user) return;
 
-    const { data, error } = await Bolt Database
+    const { data, error } = await supabase
       .from('business_information')
       .select('id')
       .eq('user_id', user.id)

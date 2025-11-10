@@ -23,6 +23,9 @@ interface PaymentSettings {
   deposit_amount: number;
   currency: string;
   tax_rate: number;
+  pass_processing_fees: boolean;
+  processing_fee_percentage: number;
+  processing_fee_fixed: number;
 }
 
 export function PaymentSettings() {
@@ -40,6 +43,9 @@ export function PaymentSettings() {
     deposit_amount: 0,
     currency: "USD",
     tax_rate: 0,
+    pass_processing_fees: false,
+    processing_fee_percentage: 2.9,
+    processing_fee_fixed: 0.30,
   });
   const [usePercentage, setUsePercentage] = useState(true);
 
@@ -314,6 +320,86 @@ export function PaymentSettings() {
                   </p>
                 </div>
               )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Percent className="h-5 w-5 text-cyan-600" />
+            Processing Fees
+          </CardTitle>
+          <CardDescription>
+            Pass credit card processing fees to customers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Pass Fees to Customers</p>
+              <p className="text-sm text-gray-500">
+                Add processing fees to credit card payments
+              </p>
+            </div>
+            <Switch
+              checked={settings.pass_processing_fees}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, pass_processing_fees: checked })
+              }
+            />
+          </div>
+
+          {settings.pass_processing_fees && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="processing_fee_percentage">Fee Percentage (%)</Label>
+                <Input
+                  id="processing_fee_percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={settings.processing_fee_percentage}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      processing_fee_percentage: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Standard Stripe fee is 2.9%
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="processing_fee_fixed">Fixed Fee per Transaction ($)</Label>
+                <Input
+                  id="processing_fee_fixed"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={settings.processing_fee_fixed}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      processing_fee_fixed: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  Standard Stripe fee is $0.30 per transaction
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Example:</strong> For a $100 charge, the customer will pay ${(100 + (100 * settings.processing_fee_percentage / 100) + settings.processing_fee_fixed).toFixed(2)}
+                  (${(100 * settings.processing_fee_percentage / 100 + settings.processing_fee_fixed).toFixed(2)} processing fee)
+                </p>
+              </div>
             </>
           )}
         </CardContent>

@@ -11,7 +11,7 @@ import { CheckCircle2, Clock, Download, FileText, PlayCircle, Sparkles, Users, C
 import { PlanSelection } from "@/components/plan-selection";
 import { getUserSubscription } from "@/lib/subscription-utils";
 import { BusinessInformationForm } from "@/components/business-information-form";
-import { Bolt Database } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
 export default function OnboardingPage() {

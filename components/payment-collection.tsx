@@ -45,6 +45,8 @@ export function PaymentCollection({
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  const [processingFee, setProcessingFee] = useState(0);
+  const [totalWithFee, setTotalWithFee] = useState(0);
 
   useEffect(() => {
     if (user && open) {
@@ -55,6 +57,19 @@ export function PaymentCollection({
   useEffect(() => {
     setPaymentAmount(amount);
   }, [amount]);
+
+  useEffect(() => {
+    if (paymentSettings && paymentMethod === 'card' && paymentSettings.pass_processing_fees) {
+      const feePercentage = paymentSettings.processing_fee_percentage / 100;
+      const feeFixed = paymentSettings.processing_fee_fixed;
+      const calculatedFee = (paymentAmount * feePercentage) + feeFixed;
+      setProcessingFee(calculatedFee);
+      setTotalWithFee(paymentAmount + calculatedFee);
+    } else {
+      setProcessingFee(0);
+      setTotalWithFee(paymentAmount);
+    }
+  }, [paymentAmount, paymentMethod, paymentSettings]);
 
   const fetchPaymentSettings = async () => {
     if (!user) return;
@@ -79,6 +94,10 @@ export function PaymentCollection({
 
     setProcessing(true);
 
+    const finalAmount = paymentMethod === 'card' && paymentSettings?.pass_processing_fees
+      ? totalWithFee
+      : paymentAmount;
+
     const transactionData = {
       user_id: user.id,
       client_id: clientId,
@@ -87,7 +106,8 @@ export function PaymentCollection({
       package_id: packageId || null,
       transaction_type: transactionType,
       payment_method: paymentMethod,
-      amount: paymentAmount,
+      amount: finalAmount,
+      processing_fee_amount: paymentMethod === 'card' ? processingFee : 0,
       status: "completed",
       notes: notes,
       processed_at: new Date().toISOString(),
@@ -240,6 +260,26 @@ export function PaymentCollection({
               />
             </div>
 
+            {paymentMethod === 'card' && paymentSettings?.pass_processing_fees && processingFee > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium text-amber-900">Fee Breakdown</p>
+                <div className="text-xs text-amber-800 space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Service amount:</span>
+                    <span>${paymentAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Processing fee ({paymentSettings.processing_fee_percentage}% + ${paymentSettings.processing_fee_fixed}):</span>
+                    <span>${processingFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold border-t border-amber-300 pt-0.5 mt-1">
+                    <span>Total charge:</span>
+                    <span>${totalWithFee.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
               <Textarea
@@ -255,7 +295,7 @@ export function PaymentCollection({
                 Cancel
               </Button>
               <Button onClick={handleCollectPayment} disabled={processing || paymentAmount <= 0}>
-                {processing ? "Processing..." : `Record Payment: $${paymentAmount.toFixed(2)}`}
+                {processing ? "Processing..." : `Record Payment: $${totalWithFee.toFixed(2)}`}
               </Button>
             </div>
           </div>

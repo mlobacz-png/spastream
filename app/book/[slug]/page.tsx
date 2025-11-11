@@ -37,6 +37,18 @@ interface BookingSettings {
   confirmation_message: string;
 }
 
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  duration_minutes: number;
+  price: number;
+  category: string;
+  requires_consultation: boolean;
+  deposit_required: boolean;
+  deposit_amount: number;
+}
+
 interface TimeSlot {
   time: Date;
   available: boolean;
@@ -47,6 +59,7 @@ export default function BookingPage() {
   const slug = params?.slug as string;
 
   const [settings, setSettings] = useState<BookingSettings | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedService, setSelectedService] = useState<string>('');
@@ -91,8 +104,23 @@ export default function BookingPage() {
 
     if (data) {
       setSettings(data);
+      await fetchServices(data.user_id);
     }
     setLoading(false);
+  };
+
+  const fetchServices = async (userId: string) => {
+    const { data } = await supabase
+      .from('services')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .eq('available_for_online_booking', true)
+      .order('display_order');
+
+    if (data) {
+      setServices(data);
+    }
   };
 
   const fetchExistingAppointments = async () => {
@@ -115,7 +143,7 @@ export default function BookingPage() {
   const generateTimeSlots = () => {
     if (!settings || !selectedDate || !selectedService) return;
 
-    const service = settings.services_offered.find(s => s.name === selectedService);
+    const service = services.find(s => s.name === selectedService);
     if (!service) return;
 
     const dayName = format(selectedDate, 'EEEE').toLowerCase();
@@ -137,7 +165,7 @@ export default function BookingPage() {
     const slots: TimeSlot[] = [];
 
     while (isBefore(currentTime, endTime)) {
-      const slotEnd = addMinutes(currentTime, service.duration);
+      const slotEnd = addMinutes(currentTime, service.duration_minutes);
 
       const isPastMinNotice = isBefore(currentTime, minBookingTime);
 
@@ -156,7 +184,7 @@ export default function BookingPage() {
         available: !isPastMinNotice && !isBooked,
       });
 
-      currentTime = addMinutes(currentTime, service.duration + settings.booking_buffer_minutes);
+      currentTime = addMinutes(currentTime, service.duration_minutes + settings.booking_buffer_minutes);
     }
 
     setAvailableSlots(slots);
@@ -178,7 +206,7 @@ export default function BookingPage() {
 
     setSubmitting(true);
 
-    const service = settings.services_offered.find(s => s.name === selectedService);
+    const service = services.find(s => s.name === selectedService);
     if (!service) return;
 
     const { error } = await supabase.from('public_bookings').insert([{
@@ -188,7 +216,7 @@ export default function BookingPage() {
       client_phone: formData.phone,
       service: selectedService,
       requested_time: selectedTime.toISOString(),
-      duration_minutes: service.duration,
+      duration_minutes: service.duration_minutes,
       status: 'pending',
       notes: formData.notes,
     }]);
@@ -351,9 +379,9 @@ export default function BookingPage() {
               <CardDescription>Choose the treatment you would like to book</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {settings.services_offered.map((service, idx) => (
+              {services.map((service) => (
                 <Card
-                  key={idx}
+                  key={service.id}
                   className="rounded-xl border border-slate-200 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
                   onClick={() => handleServiceSelect(service.name)}
                 >
@@ -367,8 +395,13 @@ export default function BookingPage() {
                         <div className="flex items-center gap-3 text-sm text-slate-500">
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            {service.duration} min
+                            {service.duration_minutes} min
                           </div>
+                          {service.deposit_required && (
+                            <Badge variant="outline" className="text-xs">
+                              ${service.deposit_amount} deposit
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">

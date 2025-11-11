@@ -18,10 +18,11 @@ import { PaymentSettings } from './payment-settings';
 import { InvoicesSection } from './invoices-section';
 import { SMSSection } from './sms-section';
 import { AnalyticsDashboard } from './analytics-dashboard';
+import { ServicesSection } from './services-section';
 import { supabase } from '@/lib/supabase';
 import { getUserSubscription } from '@/lib/subscription-utils';
 import { SpaStreamLogo, SpaStreamLogoWithText } from './spastream-logo';
-import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles } from 'lucide-react';
+import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles, Scissors } from 'lucide-react';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -122,6 +123,13 @@ export function Dashboard() {
                   Clients
                 </TabsTrigger>
                 <TabsTrigger
+                  value="services"
+                  className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-teal-500 data-[state=active]:text-white"
+                >
+                  <Scissors className="w-4 h-4 md:mr-2" />
+                  <span className="hidden md:inline">Services</span>
+                </TabsTrigger>
+                <TabsTrigger
                   value="revenue"
                   className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white"
                 >
@@ -217,6 +225,10 @@ export function Dashboard() {
 
           <TabsContent value="clients" className="mt-6">
             <ClientsSection />
+          </TabsContent>
+
+          <TabsContent value="services" className="mt-6">
+            <ServicesSection />
           </TabsContent>
 
           <TabsContent value="revenue" className="mt-6">

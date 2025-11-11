@@ -22,6 +22,9 @@ const appointmentSchema = z.object({
   price: z.number().optional(),
   payment_status: z.string().optional(),
   payment_method: z.string().optional(),
+  booking_method: z.string().optional(),
+  deposit_amount: z.number().optional(),
+  deposit_paid: z.boolean().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
@@ -54,6 +57,9 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentAdded, defa
       duration: 60,
       price: 0,
       payment_status: 'pending',
+      booking_method: 'admin',
+      deposit_amount: 0,
+      deposit_paid: false,
     },
   });
 
@@ -84,6 +90,9 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentAdded, defa
     setLoading(true);
 
     try {
+      const appointmentDate = new Date(data.start_time);
+      const bookingLeadTimeDays = Math.floor((appointmentDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
       const { error } = await supabase.from('appointments').insert([
         {
           user_id: user.id,
@@ -91,13 +100,17 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentAdded, defa
           service: data.service,
           start_time: data.start_time,
           duration: data.duration,
-          status: 'confirmed',
+          status: 'scheduled',
           notes: data.notes || '',
           price: data.price || 0,
           amount_paid: data.payment_status === 'paid' ? (data.price || 0) : 0,
           payment_status: data.payment_status || 'pending',
           payment_method: data.payment_method,
           payment_date: data.payment_status === 'paid' ? new Date().toISOString() : null,
+          booking_method: data.booking_method || 'admin',
+          deposit_amount: data.deposit_amount || 0,
+          deposit_paid: data.deposit_paid || false,
+          booking_lead_time_days: bookingLeadTimeDays,
         },
       ]);
 
@@ -205,6 +218,33 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentAdded, defa
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="space-y-2">
+                <Label htmlFor="deposit_amount">Deposit ($)</Label>
+                <Input
+                  id="deposit_amount"
+                  type="number"
+                  step="0.01"
+                  {...register('deposit_amount', { valueAsNumber: true })}
+                  className="rounded-xl"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="booking_method">Booking Method</Label>
+                <Select onValueChange={(value) => setValue('booking_method', value)} defaultValue="admin">
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="walk-in">Walk-in</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -29,6 +29,7 @@ export function StaffOptimizer() {
   const [staffName, setStaffName] = useState('');
   const [role, setRole] = useState('');
   const [shiftDate, setShiftDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -48,8 +49,13 @@ export function StaffOptimizer() {
   };
 
   const generateOptimizedSchedule = async () => {
-    if (!user || !staffName || !role) return;
+    console.log('generateOptimizedSchedule called', { user: !!user, staffName, role });
+    if (!user || !staffName || !role) {
+      console.log('Missing required fields');
+      return;
+    }
 
+    setIsLoading(true);
     try {
       const date = new Date(shiftDate);
       const shiftStart = setMinutes(setHours(date, 9), 0);
@@ -136,6 +142,8 @@ export function StaffOptimizer() {
     } catch (error) {
       console.error('Error generating schedule:', error);
       alert(`Error: ${error instanceof Error ? error.message : 'Failed to generate schedule'}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -223,11 +231,11 @@ export function StaffOptimizer() {
           </div>
           <Button
             onClick={generateOptimizedSchedule}
-            disabled={!staffName || !role}
+            disabled={!staffName || !role || isLoading}
             className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 h-12"
           >
             <Calendar className="w-4 h-4 mr-2" />
-            Generate Optimized Schedule
+            {isLoading ? 'Generating...' : 'Generate Optimized Schedule'}
           </Button>
         </CardContent>
       </Card>

@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
-import { Users, Calendar, CheckCircle, Star } from 'lucide-react';
+import { Users, Calendar, CheckCircle, Star, Trash2, CalendarDays } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, addDays, setHours, setMinutes } from 'date-fns';
 
 interface StaffSchedule {
@@ -43,13 +44,29 @@ export function StaffOptimizer() {
       .from('staff_schedules')
       .select('*')
       .eq('user_id', user.id)
-      .order('shift_start', { ascending: false })
-      .limit(20);
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     console.log('Schedules fetched:', { count: data?.length, error });
     if (data) {
       console.log('Setting schedules:', data);
       setSchedules(data);
+    }
+  };
+
+  const deleteSchedule = async (scheduleId: string) => {
+    if (!confirm('Are you sure you want to delete this schedule?')) return;
+
+    const { error } = await supabase
+      .from('staff_schedules')
+      .delete()
+      .eq('id', scheduleId);
+
+    if (error) {
+      console.error('Error deleting schedule:', error);
+      alert('Failed to delete schedule');
+    } else {
+      await fetchSchedules();
     }
   };
 
@@ -269,8 +286,20 @@ export function StaffOptimizer() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-slate-800">Upcoming Shifts</h3>
+      <Tabs defaultValue="individual" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 rounded-xl">
+          <TabsTrigger value="individual" className="rounded-lg">
+            <Users className="w-4 h-4 mr-2" />
+            Individual Schedules
+          </TabsTrigger>
+          <TabsTrigger value="master" className="rounded-lg">
+            <CalendarDays className="w-4 h-4 mr-2" />
+            Master Schedule
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="individual" className="space-y-4">
+          <h3 className="text-lg font-medium text-slate-800">Staff Schedules</h3>
         {schedules.length === 0 ? (
           <Card className="rounded-2xl border-0 shadow-lg bg-white/80 backdrop-blur">
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -289,13 +318,23 @@ export function StaffOptimizer() {
                       {schedule.role}
                     </Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-600">
-                      {format(new Date(schedule.shift_start), 'MMM dd, yyyy')}
-                    </p>
-                    <p className="text-lg font-semibold text-indigo-600">
-                      {format(new Date(schedule.shift_start), 'h:mm a')} - {format(new Date(schedule.shift_end), 'h:mm a')}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <div className="text-right">
+                      <p className="text-sm text-slate-600">
+                        {format(new Date(schedule.shift_start), 'MMM dd, yyyy')}
+                      </p>
+                      <p className="text-lg font-semibold text-indigo-600">
+                        {format(new Date(schedule.shift_start), 'h:mm a')} - {format(new Date(schedule.shift_end), 'h:mm a')}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteSchedule(schedule.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -324,7 +363,90 @@ export function StaffOptimizer() {
             </Card>
           ))
         )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="master" className="space-y-4">
+          <MasterScheduleView schedules={schedules} getRoleColor={getRoleColor} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+interface MasterScheduleProps {
+  schedules: StaffSchedule[];
+  getRoleColor: (role: string) => string;
+}
+
+function MasterScheduleView({ schedules, getRoleColor }: MasterScheduleProps) {
+  const groupedByDate = schedules.reduce((acc, schedule) => {
+    const date = format(new Date(schedule.shift_start), 'yyyy-MM-dd');
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(schedule);
+    return acc;
+  }, {} as Record<string, StaffSchedule[]>);
+
+  const sortedDates = Object.keys(groupedByDate).sort((a, b) =>
+    new Date(b).getTime() - new Date(a).getTime()
+  );
+
+  if (schedules.length === 0) {
+    return (
+      <Card className="rounded-2xl border-0 shadow-lg bg-white/80 backdrop-blur">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <CalendarDays className="w-12 h-12 text-slate-300 mb-4" />
+          <p className="text-slate-500">No schedules to display. Create schedules to see the master view.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {sortedDates.map(date => (
+        <Card key={date} className="rounded-2xl border-0 shadow-lg bg-white/80 backdrop-blur">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-500" />
+              {format(new Date(date), 'EEEE, MMMM dd, yyyy')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {groupedByDate[date]
+                .sort((a: StaffSchedule, b: StaffSchedule) => new Date(a.shift_start).getTime() - new Date(b.shift_start).getTime())
+                .map((schedule: StaffSchedule) => (
+                <div key={schedule.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-medium text-slate-800">{schedule.staff_name}</p>
+                      <Badge className={`rounded-full border mt-1 text-xs ${getRoleColor(schedule.role)}`}>
+                        {schedule.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-indigo-600">
+                        {format(new Date(schedule.shift_start), 'h:mm a')} - {format(new Date(schedule.shift_end), 'h:mm a')}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {schedule.tasks?.length || 0} tasks assigned
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-500" />
+                      <span className="text-sm text-slate-600">
+                        {(schedule.performance_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

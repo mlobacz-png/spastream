@@ -56,7 +56,15 @@ export function StaffOptimizer() {
       const shiftEnd = setMinutes(setHours(date, 17), 0);
 
       const session = await supabase.auth.getSession();
-      const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/staff-optimizer`;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+      if (!supabaseUrl) {
+        console.error('Supabase URL not found');
+        alert('Configuration error: Supabase URL not found');
+        return;
+      }
+
+      const apiUrl = `${supabaseUrl}/functions/v1/staff-optimizer`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -90,6 +98,10 @@ export function StaffOptimizer() {
             reasoning: shift.reasoning,
           }));
         }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API error:', errorData);
+        alert(`Failed to generate schedule: ${errorData.error || response.statusText}`);
       }
 
       if (assignedTasks.length === 0) {
@@ -123,6 +135,7 @@ export function StaffOptimizer() {
       await fetchSchedules();
     } catch (error) {
       console.error('Error generating schedule:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to generate schedule'}`);
     }
   };
 

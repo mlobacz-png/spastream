@@ -57,11 +57,16 @@ export function StaffOptimizer() {
 
     setIsLoading(true);
     try {
+      console.log('Step 1: Creating date objects');
       const date = new Date(shiftDate);
       const shiftStart = setMinutes(setHours(date, 9), 0);
       const shiftEnd = setMinutes(setHours(date, 17), 0);
+      console.log('Shift times:', { shiftStart, shiftEnd });
 
+      console.log('Step 2: Getting session');
       const session = await supabase.auth.getSession();
+      console.log('Session obtained:', !!session.data.session);
+
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
       if (!supabaseUrl) {
@@ -71,6 +76,7 @@ export function StaffOptimizer() {
       }
 
       const apiUrl = `${supabaseUrl}/functions/v1/staff-optimizer`;
+      console.log('Step 3: Calling API:', apiUrl);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -90,9 +96,13 @@ export function StaffOptimizer() {
         }),
       });
 
+      console.log('Step 4: Response received:', response.status, response.statusText);
+
       let assignedTasks = [];
       if (response.ok) {
+        console.log('Step 5: Response OK, parsing JSON');
         const optimization = await response.json();
+        console.log('Optimization data:', optimization);
         const dayOfWeek = format(date, 'EEEE');
         const daySchedule = optimization.recommendations?.find((rec: any) => rec.day === dayOfWeek);
 
@@ -104,13 +114,16 @@ export function StaffOptimizer() {
             reasoning: shift.reasoning,
           }));
         }
+        console.log('Assigned tasks from API:', assignedTasks);
       } else {
+        console.log('Step 5: Response NOT OK');
         const errorData = await response.json().catch(() => ({}));
         console.error('API error:', errorData);
         alert(`Failed to generate schedule: ${errorData.error || response.statusText}`);
       }
 
       if (assignedTasks.length === 0) {
+        console.log('Step 6: Using fallback tasks');
         const roleTasks: Record<string, string[]> = {
           'Medical Director': ['Botox Injections', 'Filler Procedures', 'Client Consultations'],
           'Nurse Injector': ['Botox Injections', 'Filler Procedures'],
@@ -124,9 +137,11 @@ export function StaffOptimizer() {
           priority: 'high',
           estimated_time: '2 hours',
         }));
+        console.log('Fallback tasks:', assignedTasks);
       }
 
-      await supabase.from('staff_schedules').insert([{
+      console.log('Step 7: Inserting into database');
+      const { data: insertData, error: insertError } = await supabase.from('staff_schedules').insert([{
         user_id: user.id,
         staff_name: staffName,
         role,
@@ -136,9 +151,18 @@ export function StaffOptimizer() {
         performance_score: 0.85 + Math.random() * 0.15,
       }]);
 
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('Step 8: Insert successful, clearing form');
       setStaffName('');
       setRole('');
+
+      console.log('Step 9: Fetching updated schedules');
       await fetchSchedules();
+      console.log('Step 10: Complete!');
     } catch (error) {
       console.error('Error generating schedule:', error);
       alert(`Error: ${error instanceof Error ? error.message : 'Failed to generate schedule'}`);

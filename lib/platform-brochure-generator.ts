@@ -514,9 +514,9 @@ export function generatePlatformBrochure() {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont('times', 'normal');
-  doc.text('www.medspaflow.com', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('www.spastream.net', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
-  doc.text('support@medspaflow.com', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('info@spastream.net', pageWidth / 2, yPos, { align: 'center' });
 
   doc.save('SpaStream-Platform-Overview.pdf');
 }

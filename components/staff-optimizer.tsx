@@ -38,14 +38,19 @@ export function StaffOptimizer() {
 
   const fetchSchedules = async () => {
     if (!user) return;
-    const { data } = await supabase
+    console.log('Fetching schedules for user:', user.id);
+    const { data, error } = await supabase
       .from('staff_schedules')
       .select('*')
       .eq('user_id', user.id)
-      .gte('shift_start', new Date().toISOString())
-      .order('shift_start')
+      .order('shift_start', { ascending: false })
       .limit(20);
-    if (data) setSchedules(data);
+
+    console.log('Schedules fetched:', { count: data?.length, error });
+    if (data) {
+      console.log('Setting schedules:', data);
+      setSchedules(data);
+    }
   };
 
   const generateOptimizedSchedule = async () => {

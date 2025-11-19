@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { FileText, Plus, Download, Eye, Trash2, DollarSign } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/invoice-generator";
+import { PaymentCollection } from "@/components/payment-collection";
 
 interface Client {
   id: string;
@@ -65,6 +66,8 @@ export function InvoicesSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
 
   const [newInvoice, setNewInvoice] = useState({
     client_id: "",
@@ -75,13 +78,21 @@ export function InvoicesSection() {
   });
 
   useEffect(() => {
+    console.log('InvoicesSection - user changed:', user ? 'User present' : 'No user', user?.id);
     if (user) {
       fetchData();
+    } else {
+      console.log('InvoicesSection - No user, not fetching data');
     }
   }, [user]);
 
   const fetchData = async () => {
     if (!user) return;
+
+    // Debug: Check if session exists
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Current session:', session);
+    console.log('Session access token:', session?.access_token);
 
     const [invoicesRes, clientsRes, settingsRes] = await Promise.all([
       supabase
@@ -92,6 +103,9 @@ export function InvoicesSection() {
       supabase.from("clients").select("id, name, email, phone").eq("user_id", user.id),
       supabase.from("payment_settings").select("*").eq("user_id", user.id).maybeSingle(),
     ]);
+
+    console.log('Invoices error:', invoicesRes.error);
+    console.log('Clients error:', clientsRes.error);
 
     if (invoicesRes.data) setInvoices(invoicesRes.data as any);
     if (clientsRes.data) setClients(clientsRes.data);
@@ -139,35 +153,54 @@ export function InvoicesSection() {
   };
 
   const handleCreateInvoice = async () => {
-    if (!user || !newInvoice.client_id) return;
+    if (!user || !newInvoice.client_id) {
+      alert("Please select a client");
+      return;
+    }
 
-    const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotal(
-      newInvoice.line_items,
-      newInvoice.discount_amount
-    );
+    if (newInvoice.line_items.length === 0 || !newInvoice.line_items[0].service) {
+      alert("Please add at least one service");
+      return;
+    }
 
-    const invoiceNumberRes = await supabase.rpc("generate_invoice_number");
-    const invoiceNumber = invoiceNumberRes.data || `INV-${Date.now()}`;
+    try {
+      const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotal(
+        newInvoice.line_items,
+        newInvoice.discount_amount
+      );
 
-    const { error } = await supabase.from("invoices").insert({
-      user_id: user.id,
-      client_id: newInvoice.client_id,
-      invoice_number: invoiceNumber,
-      invoice_date: new Date().toISOString().split("T")[0],
-      due_date: newInvoice.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      status: "draft",
-      line_items: newInvoice.line_items,
-      subtotal,
-      tax_amount: taxAmount,
-      discount_amount: newInvoice.discount_amount,
-      total_amount: totalAmount,
-      amount_paid: 0,
-      balance_due: totalAmount,
-      notes: newInvoice.notes,
-    });
+      const invoiceNumberRes = await supabase.rpc("generate_invoice_number");
 
-    if (!error) {
-      fetchData();
+      if (invoiceNumberRes.error) {
+        console.error("Error generating invoice number:", invoiceNumberRes.error);
+      }
+
+      const invoiceNumber = invoiceNumberRes.data || `INV-${Date.now()}`;
+
+      const { error } = await supabase.from("invoices").insert({
+        user_id: user.id,
+        client_id: newInvoice.client_id,
+        invoice_number: invoiceNumber,
+        invoice_date: new Date().toISOString().split("T")[0],
+        due_date: newInvoice.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        status: "draft",
+        line_items: newInvoice.line_items,
+        subtotal,
+        tax_amount: taxAmount,
+        discount_amount: newInvoice.discount_amount,
+        total_amount: totalAmount,
+        amount_paid: 0,
+        balance_due: totalAmount,
+        notes: newInvoice.notes,
+      });
+
+      if (error) {
+        console.error("Error creating invoice:", error);
+        alert(`Failed to create invoice: ${error.message}`);
+        return;
+      }
+
+      await fetchData();
       setDialogOpen(false);
       setNewInvoice({
         client_id: "",
@@ -176,6 +209,11 @@ export function InvoicesSection() {
         notes: "",
         discount_amount: 0,
       });
+
+      alert("Invoice created successfully!");
+    } catch (err: any) {
+      console.error("Unexpected error:", err);
+      alert(`An error occurred: ${err.message}`);
     }
   };
 
@@ -460,6 +498,18 @@ export function InvoicesSection() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  {invoice.balance_due > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedInvoiceForPayment(invoice);
+                        setPaymentDialogOpen(true);
+                      }}
+                    >
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      Collect Payment
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => handleDownloadPDF(invoice)}>
                     <Download className="h-4 w-4" />
                   </Button>
@@ -485,6 +535,18 @@ export function InvoicesSection() {
           </Card>
         )}
       </div>
+
+      {selectedInvoiceForPayment && (
+        <PaymentCollection
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          clientId={selectedInvoiceForPayment.client_id}
+          clientName={selectedInvoiceForPayment.clients?.name || "Unknown Client"}
+          amount={selectedInvoiceForPayment.balance_due}
+          invoiceId={selectedInvoiceForPayment.id}
+          onSuccess={fetchData}
+        />
+      )}
     </div>
   );
 }

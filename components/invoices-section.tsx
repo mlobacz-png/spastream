@@ -247,17 +247,24 @@ export function InvoicesSection() {
   };
 
   const handleSendPaymentLink = async (invoice: Invoice) => {
+    console.log("=== SEND PAYMENT LINK CLICKED ===");
+    console.log("handleSendPaymentLink called for invoice:", invoice.id);
+    console.log("Payment settings:", paymentSettings);
+
     if (!paymentSettings?.stripe_secret_key) {
       alert("Please configure Stripe in Payment Settings first.");
       return;
     }
 
     const client = clients.find((c) => c.id === invoice.client_id);
+    console.log("Client found:", client);
+
     if (!client?.email) {
       alert("Client email is required to send payment link.");
       return;
     }
 
+    console.log("Starting payment link request...");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -280,10 +287,23 @@ export function InvoicesSection() {
       const result = await response.json();
 
       if (!response.ok) {
+        console.error("Payment link error response:", result);
         throw new Error(result.error || "Failed to send payment link");
       }
 
-      alert(`Payment link sent to ${client.email}! Link expires on ${new Date(result.expiresAt).toLocaleDateString()}`);
+      console.log("Payment link result:", result);
+
+      // Show the payment URL in a copyable dialog
+      const expiresDate = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString() : "7 days";
+      const message = `Payment link created!\n\nURL: ${result.paymentUrl}\n\nExpires: ${expiresDate}\n\nAn email has been sent to ${client.email}`;
+
+      // Copy to clipboard
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(result.paymentUrl);
+        alert(`${message}\n\n✓ Link copied to clipboard!`);
+      } else {
+        alert(message);
+      }
     } catch (error: any) {
       console.error("Error sending payment link:", error);
       alert(`Failed to send payment link: ${error.message}`);

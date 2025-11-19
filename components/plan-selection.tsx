@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2 } from 'lucide-react';
-import { getSubscriptionPlans, createUserSubscription, formatPrice, type SubscriptionPlan } from '@/lib/subscription-utils';
+import { getSubscriptionPlans, formatPrice, type SubscriptionPlan } from '@/lib/subscription-utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface PlanSelectionProps {
   onComplete?: () => void;
@@ -34,27 +35,58 @@ export function PlanSelection({ onComplete }: PlanSelectionProps) {
     setSubscribing(true);
     setSelectedPlan(planId);
 
-    const success = await createUserSubscription(planId);
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-    if (success) {
-      toast({
-        title: 'Success!',
-        description: 'Your 14-day free trial has started.',
+      // Get plan details
+      const plan = plans.find(p => p.id === planId);
+      if (!plan) {
+        throw new Error('Plan not found');
+      }
+
+      // Create Stripe Checkout session
+      const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-subscription-checkout`;
+      const headers = {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          planId: plan.id,
+          planName: plan.name,
+          planPrice: plan.price,
+          userId: user.id,
+          userEmail: user.email,
+        }),
       });
 
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1000);
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to create checkout session');
       }
-    } else {
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error('Error starting subscription:', error);
       toast({
         title: 'Error',
-        description: 'Failed to start subscription. Please try again.',
+        description: error.message || 'Failed to start subscription. Please try again.',
         variant: 'destructive',
       });
       setSelectedPlan(null);
+      setSubscribing(false);
     }
-
-    setSubscribing(false);
   }
 
   if (loading) {
@@ -115,10 +147,10 @@ export function PlanSelection({ onComplete }: PlanSelectionProps) {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
         <p className="text-xl text-slate-600 mb-2">
-          Start with a 14-day free trial. No credit card required.
+          Start with a 14-day free trial. Add your payment method to get started.
         </p>
         <Badge className="bg-green-100 text-green-700 border-0">
-          Cancel anytime
+          Cancel anytime • No charge until trial ends
         </Badge>
       </div>
 
@@ -146,6 +178,7 @@ export function PlanSelection({ onComplete }: PlanSelectionProps) {
                 <div className="mt-4">
                   <span className="text-4xl font-bold">{formatPrice(plan.price)}</span>
                   <span className="text-slate-600">/month</span>
+                  <p className="text-xs text-slate-500 mt-2">14-day free trial, then {formatPrice(plan.price)}/month</p>
                 </div>
               </CardHeader>
 
@@ -169,10 +202,10 @@ export function PlanSelection({ onComplete }: PlanSelectionProps) {
                   {subscribing && selectedPlan === plan.id ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Starting Trial...
+                      Loading Checkout...
                     </>
                   ) : (
-                    'Start Free Trial'
+                    'Continue to Checkout'
                   )}
                 </Button>
               </CardContent>

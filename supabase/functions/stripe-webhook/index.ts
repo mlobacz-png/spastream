@@ -23,7 +23,77 @@ Deno.serve(async (req: Request) => {
     const payload = await req.json();
     const eventType = payload.type;
 
-    if (eventType === "payment_intent.succeeded") {
+    if (eventType === "checkout.session.completed") {
+      const session = payload.data.object;
+      const metadata = session.metadata;
+
+      if (session.mode === "subscription" && metadata.user_id && metadata.plan_id) {
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 14);
+
+        await supabase
+          .from("user_subscriptions")
+          .insert({
+            user_id: metadata.user_id,
+            plan_id: metadata.plan_id,
+            status: "trialing",
+            trial_ends_at: trialEnd.toISOString(),
+            current_period_start: new Date().toISOString(),
+            stripe_subscription_id: session.subscription,
+            stripe_customer_id: session.customer,
+          });
+      }
+    } else if (eventType === "customer.subscription.updated") {
+      const subscription = payload.data.object;
+      const metadata = subscription.metadata;
+
+      if (metadata.user_id) {
+        const status = subscription.status === "active" ? "active" :
+                      subscription.status === "trialing" ? "trialing" :
+                      subscription.status === "past_due" ? "past_due" :
+                      subscription.status === "canceled" ? "cancelled" : "expired";
+
+        await supabase
+          .from("user_subscriptions")
+          .update({
+            status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          })
+          .eq("stripe_subscription_id", subscription.id);
+      }
+    } else if (eventType === "customer.subscription.deleted") {
+      const subscription = payload.data.object;
+
+      await supabase
+        .from("user_subscriptions")
+        .update({
+          status: "cancelled",
+        })
+        .eq("stripe_subscription_id", subscription.id);
+    } else if (eventType === "invoice.payment_succeeded") {
+      const invoice = payload.data.object;
+
+      if (invoice.subscription) {
+        await supabase
+          .from("user_subscriptions")
+          .update({
+            status: "active",
+          })
+          .eq("stripe_subscription_id", invoice.subscription);
+      }
+    } else if (eventType === "invoice.payment_failed") {
+      const invoice = payload.data.object;
+
+      if (invoice.subscription) {
+        await supabase
+          .from("user_subscriptions")
+          .update({
+            status: "past_due",
+          })
+          .eq("stripe_subscription_id", invoice.subscription);
+      }
+    } else if (eventType === "payment_intent.succeeded") {
       const paymentIntent = payload.data.object;
       const metadata = paymentIntent.metadata;
 

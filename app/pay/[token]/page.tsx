@@ -57,6 +57,9 @@ export default function PaymentPage() {
 
   const fetchPaymentLink = async () => {
     try {
+      console.log("=== FETCHING PAYMENT LINK ===");
+      console.log("Token:", token);
+
       const { data, error } = await supabase
         .from("payment_links")
         .select(`
@@ -79,7 +82,10 @@ export default function PaymentPage() {
         .eq("unique_token", token)
         .maybeSingle();
 
+      console.log("Query result:", { data, error });
+
       if (error || !data) {
+        console.log("Error or no data found:", error);
         setError("Payment link not found");
         setLoading(false);
         return;

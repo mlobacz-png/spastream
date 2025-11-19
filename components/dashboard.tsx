@@ -32,12 +32,38 @@ export function Dashboard() {
 
   useEffect(() => {
     const onboarded = searchParams.get('onboarded');
+    const subscriptionSuccess = searchParams.get('subscription');
+
     if (onboarded === 'true') {
       setCheckingSubscription(false);
+    } else if (subscriptionSuccess === 'success') {
+      // Poll for subscription after Stripe redirect
+      checkSubscriptionWithRetry();
     } else {
       checkSubscription();
     }
   }, []);
+
+  async function checkSubscriptionWithRetry(attempts = 0, maxAttempts = 10) {
+    const subscription = await getUserSubscription();
+
+    if (subscription) {
+      // Subscription found! Clean up URL and show dashboard
+      router.replace('/app');
+      setCheckingSubscription(false);
+      return;
+    }
+
+    // If we haven't found it yet and haven't exceeded max attempts, try again
+    if (attempts < maxAttempts) {
+      setTimeout(() => {
+        checkSubscriptionWithRetry(attempts + 1, maxAttempts);
+      }, 1000); // Check every 1 second
+    } else {
+      // After 10 seconds, fall back to regular check
+      checkSubscription();
+    }
+  }
 
   async function checkSubscription() {
     const subscription = await getUserSubscription();

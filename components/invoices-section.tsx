@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
-import { FileText, Plus, Download, Eye, Trash2, DollarSign } from "lucide-react";
+import { FileText, Plus, Download, Eye, Trash2, DollarSign, Send } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/invoice-generator";
 import { PaymentCollection } from "@/components/payment-collection";
 
@@ -244,6 +244,50 @@ export function InvoicesSection() {
 
     await supabase.from("invoices").delete().eq("id", id);
     fetchData();
+  };
+
+  const handleSendPaymentLink = async (invoice: Invoice) => {
+    if (!paymentSettings?.stripe_secret_key) {
+      alert("Please configure Stripe in Payment Settings first.");
+      return;
+    }
+
+    const client = clients.find((c) => c.id === invoice.client_id);
+    if (!client?.email) {
+      alert("Client email is required to send payment link.");
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert("Please sign in again.");
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-payment-link`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ invoiceId: invoice.id }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send payment link");
+      }
+
+      alert(`Payment link sent to ${client.email}! Link expires on ${new Date(result.expiresAt).toLocaleDateString()}`);
+    } catch (error: any) {
+      console.error("Error sending payment link:", error);
+      alert(`Failed to send payment link: ${error.message}`);
+    }
   };
 
   if (loading) {
@@ -499,16 +543,26 @@ export function InvoicesSection() {
                 </div>
                 <div className="flex gap-2">
                   {invoice.balance_due > 0 && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedInvoiceForPayment(invoice);
-                        setPaymentDialogOpen(true);
-                      }}
-                    >
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      Collect Payment
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedInvoiceForPayment(invoice);
+                          setPaymentDialogOpen(true);
+                        }}
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Collect Payment
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSendPaymentLink(invoice)}
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Send Payment Link
+                      </Button>
+                    </>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handleDownloadPDF(invoice)}>
                     <Download className="h-4 w-4" />

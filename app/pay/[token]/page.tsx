@@ -16,6 +16,7 @@ interface PaymentLink {
   status: string;
   expires_at: string;
   client_id: string;
+  user_id: string;
   invoices: {
     id: string;
     invoice_number: string;
@@ -27,10 +28,8 @@ interface PaymentLink {
     name: string;
     email: string;
   };
-  users: {
-    business_information: {
-      business_name: string;
-    }[];
+  business_information?: {
+    business_name: string;
   };
 }
 
@@ -72,11 +71,6 @@ export default function PaymentPage() {
           clients (
             name,
             email
-          ),
-          users (
-            business_information (
-              business_name
-            )
           )
         `)
         .eq("unique_token", token)
@@ -89,6 +83,18 @@ export default function PaymentPage() {
         setError("Payment link not found");
         setLoading(false);
         return;
+      }
+
+      // Fetch business information separately
+      const { data: businessInfo } = await supabase
+        .from("business_information")
+        .select("business_name")
+        .eq("user_id", data.user_id)
+        .maybeSingle();
+
+      // Add business info to the data
+      if (businessInfo) {
+        (data as any).business_information = businessInfo;
       }
 
       if (data.status === "paid") {
@@ -179,7 +185,7 @@ export default function PaymentPage() {
     }
   };
 
-  const businessName = paymentLink?.users?.business_information?.[0]?.business_name || "Business";
+  const businessName = paymentLink?.business_information?.business_name || "Business";
 
   if (loading) {
     return (

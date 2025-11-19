@@ -16,11 +16,32 @@ Deno.serve(async (req: Request) => {
 
   try {
     const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+    const APP_URL = Deno.env.get("APP_URL");
+
+    console.log("Environment check:", {
+      hasStripeKey: !!STRIPE_SECRET_KEY,
+      appUrl: APP_URL,
+    });
+
     if (!STRIPE_SECRET_KEY) {
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
 
+    if (!APP_URL) {
+      throw new Error("APP_URL not configured");
+    }
+
     const { planId, planName, planPrice, userId, userEmail } = await req.json();
+
+    console.log("Creating checkout session:", {
+      planId,
+      planName,
+      planPrice,
+      userId,
+      userEmail,
+      successUrl: `${APP_URL}/app?subscription=success`,
+      cancelUrl: `${APP_URL}/onboarding?step=plan`,
+    });
 
     if (!planId || !planName || !planPrice || !userId || !userEmail) {
       return new Response(
@@ -66,6 +87,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const session = await stripeResponse.json();
+
+    console.log("Checkout session created:", {
+      sessionId: session.id,
+      url: session.url,
+      successUrl: session.success_url,
+      cancelUrl: session.cancel_url,
+    });
 
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),

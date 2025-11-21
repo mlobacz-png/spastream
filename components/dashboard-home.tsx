@@ -27,6 +27,7 @@ import { format, isToday, isTomorrow, isThisWeek, startOfMonth, endOfMonth, subM
 import { generatePlatformBrochure } from '@/lib/platform-brochure-generator';
 import { generateQuickStartGuide } from '@/lib/quick-start-guide-generator';
 import { ComparisonWidget, RevenueGoalWidget } from './dashboard-comparison-widget';
+import { PlatformRevenueWidget } from './platform-revenue-widget';
 
 interface DashboardStats {
   totalClients: number;
@@ -389,6 +390,8 @@ export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => voi
           />
         </div>
       </div>
+
+      <PlatformRevenueWidget />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>

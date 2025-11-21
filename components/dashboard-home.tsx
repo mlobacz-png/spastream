@@ -23,8 +23,9 @@ import {
   UserPlus,
   Calendar
 } from 'lucide-react';
-import { format, isToday, isTomorrow, isThisWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, isToday, isTomorrow, isThisWeek, startOfMonth, endOfMonth, subMonths, differenceInDays } from 'date-fns';
 import { generatePlatformBrochure } from '@/lib/platform-brochure-generator';
+import { generateQuickStartGuide } from '@/lib/quick-start-guide-generator';
 import { ComparisonWidget, RevenueGoalWidget } from './dashboard-comparison-widget';
 
 interface DashboardStats {
@@ -42,6 +43,12 @@ interface DashboardStats {
   revenueGoal: number;
 }
 
+interface UserSubscriptionInfo {
+  planName: string;
+  status: string;
+  trialDaysLeft: number | null;
+}
+
 export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const [stats, setStats] = useState<DashboardStats>({
     totalClients: 0,
@@ -57,11 +64,48 @@ export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => voi
     lastMonthAppointments: 0,
     revenueGoal: 50000,
   });
+  const [subscriptionInfo, setSubscriptionInfo] = useState<UserSubscriptionInfo>({
+    planName: 'Free',
+    status: 'active',
+    trialDaysLeft: null,
+  });
   const { user } = useAuth();
 
   useEffect(() => {
     fetchStats();
+    fetchSubscription();
   }, [user]);
+
+  const fetchSubscription = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select(`
+        status,
+        trial_ends_at,
+        plan:subscription_plans(name)
+      `)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error('Error fetching subscription:', error);
+      return;
+    }
+
+    const planName = (data.plan as any)?.name || 'Free';
+    const status = data.status;
+    let trialDaysLeft = null;
+
+    if (status === 'trialing' && data.trial_ends_at) {
+      const trialEnd = new Date(data.trial_ends_at);
+      const today = new Date();
+      trialDaysLeft = Math.max(0, differenceInDays(trialEnd, today));
+    }
+
+    setSubscriptionInfo({ planName, status, trialDaysLeft });
+  };
 
   const fetchStats = async () => {
     if (!user) return;
@@ -219,10 +263,17 @@ export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => voi
                 Welcome back to SpaStream
               </p>
             </div>
-            <Badge className="bg-white/20 backdrop-blur border-white/30 text-white hover:bg-white/30">
-              <Star className="w-3 h-3 mr-1" />
-              Premium Plan
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge className="bg-white/20 backdrop-blur border-white/30 text-white hover:bg-white/30">
+                <Star className="w-3 h-3 mr-1" />
+                {subscriptionInfo.planName} Plan
+              </Badge>
+              {subscriptionInfo.status === 'trialing' && subscriptionInfo.trialDaysLeft !== null && (
+                <span className="text-xs text-white/80">
+                  {subscriptionInfo.trialDaysLeft} {subscriptionInfo.trialDaysLeft === 1 ? 'day' : 'days'} left in trial
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
@@ -445,45 +496,87 @@ export function DashboardHome({ onNavigate }: { onNavigate: (tab: string) => voi
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-              <FileText className="w-7 h-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-medium text-slate-800 mb-1">
-                Platform Overview Brochure
-              </h3>
-              <p className="text-slate-600 mb-3">
-                Download a comprehensive PDF guide featuring all SpaStream features, benefits, and capabilities.
-                Perfect for sharing with your team or presenting to stakeholders.
-              </p>
-              <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                <Badge variant="outline" className="bg-white">
-                  Complete Feature List
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Business Benefits
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Use Cases
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  12 Pages
-                </Badge>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <FileText className="w-7 h-7 text-white" />
               </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-medium text-slate-800 mb-1">
+                  Platform Overview Brochure
+                </h3>
+                <p className="text-slate-600 mb-3">
+                  Download a comprehensive PDF guide featuring all SpaStream features, benefits, and capabilities.
+                  Perfect for sharing with your team or presenting to stakeholders.
+                </p>
+                <div className="flex flex-wrap gap-2 text-sm text-slate-600 mb-4">
+                  <Badge variant="outline" className="bg-white">
+                    Complete Feature List
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    Business Benefits
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    Use Cases
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    12 Pages
+                  </Badge>
+                </div>
+              </div>
+              <Button
+                onClick={generatePlatformBrochure}
+                className="w-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover:shadow-xl transition-all"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
             </div>
-            <Button
-              onClick={generatePlatformBrochure}
-              className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover:shadow-xl transition-all"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download PDF
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <Zap className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-medium text-slate-800 mb-1">
+                  Quick Start Guide
+                </h3>
+                <p className="text-slate-600 mb-3">
+                  Get up and running fast! Download your personalized quick start guide with step-by-step instructions
+                  to set up your med spa practice in minutes.
+                </p>
+                <div className="flex flex-wrap gap-2 text-sm text-slate-600 mb-4">
+                  <Badge variant="outline" className="bg-white">
+                    Step-by-Step Setup
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    Best Practices
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    Quick Tips
+                  </Badge>
+                  <Badge variant="outline" className="bg-white">
+                    5 Minutes
+                  </Badge>
+                </div>
+              </div>
+              <Button
+                onClick={generateQuickStartGuide}
+                className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg hover:shadow-xl transition-all"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Guide
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

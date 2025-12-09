@@ -19,10 +19,11 @@ import { InvoicesSection } from './invoices-section';
 import { SMSSection } from './sms-section';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { ServicesSection } from './services-section';
+import { VoiceAISection } from './voice-ai-section';
 import { supabase } from '@/lib/supabase';
 import { getUserSubscription } from '@/lib/subscription-utils';
 import { SpaStreamLogo, SpaStreamLogoWithText } from './spastream-logo';
-import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles, Scissors } from 'lucide-react';
+import { LogOut, Home, DollarSign, Package, PackageOpen, Mail, Globe, Users, CreditCard, FileText, MessageSquare, BarChart3, Sparkles, Scissors, Phone } from 'lucide-react';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -183,6 +184,13 @@ export function Dashboard() {
                   <Mail className="w-4 h-4 md:mr-2" />
                   <span className="hidden md:inline">Marketing</span>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="voice-ai"
+                  className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
+                >
+                  <Phone className="w-4 h-4 md:mr-2" />
+                  <span className="hidden md:inline">Voice AI</span>
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -299,6 +307,10 @@ export function Dashboard() {
 
           <TabsContent value="ai" className="mt-6">
             <AIFeatures />
+          </TabsContent>
+
+          <TabsContent value="voice-ai" className="mt-6">
+            <VoiceAISection />
           </TabsContent>
         </Tabs>
       </main>

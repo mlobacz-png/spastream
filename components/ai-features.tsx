@@ -8,7 +8,9 @@ import { TreatmentRecommender } from './treatment-recommender';
 import { DynamicPricing } from './dynamic-pricing';
 import { StaffOptimizer } from './staff-optimizer';
 import { ReputationBooster } from './reputation-booster';
-import { Shield, TrendingUp, Sparkles, DollarSign, Users, Star } from 'lucide-react';
+import { ClientRetentionAI } from './client-retention-ai';
+import { InventoryForecastingAI } from './inventory-forecasting-ai';
+import { Shield, TrendingUp, Sparkles, DollarSign, Users, Star, UserX, PackageSearch } from 'lucide-react';
 
 export function AIFeatures() {
   return (
@@ -24,13 +26,27 @@ export function AIFeatures() {
       </div>
 
       <Tabs defaultValue="compliance" className="space-y-6">
-        <TabsList className="bg-white/80 backdrop-blur border border-slate-200 rounded-full p-1 shadow-lg grid grid-cols-3 md:grid-cols-6 gap-1">
+        <TabsList className="bg-white/80 backdrop-blur border border-slate-200 rounded-full p-1 shadow-lg grid grid-cols-4 md:grid-cols-8 gap-1">
           <TabsTrigger
             value="compliance"
-            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white"
           >
             <Shield className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Compliance</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="retention"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+          >
+            <UserX className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Retention</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="inventory"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white"
+          >
+            <PackageSearch className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Inventory</span>
           </TabsTrigger>
           <TabsTrigger
             value="predictions"
@@ -41,21 +57,21 @@ export function AIFeatures() {
           </TabsTrigger>
           <TabsTrigger
             value="treatment"
-            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-lime-500 data-[state=active]:text-white"
           >
             <Sparkles className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Treatment</span>
           </TabsTrigger>
           <TabsTrigger
             value="pricing"
-            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-white"
           >
             <DollarSign className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Pricing</span>
           </TabsTrigger>
           <TabsTrigger
             value="staff"
-            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-sky-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
           >
             <Users className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Staff</span>
@@ -71,6 +87,14 @@ export function AIFeatures() {
 
         <TabsContent value="compliance">
           <AICompliance />
+        </TabsContent>
+
+        <TabsContent value="retention">
+          <ClientRetentionAI />
+        </TabsContent>
+
+        <TabsContent value="inventory">
+          <InventoryForecastingAI />
         </TabsContent>
 
         <TabsContent value="predictions">

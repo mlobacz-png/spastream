@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase";
 import { Loader2, RefreshCw, Package, AlertTriangle, TrendingUp, TrendingDown, Minus, Calendar, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { ConfidenceBar } from "./ai-confidence-bar";
+import { SafeProgress } from "./safe-progress";
 
 interface InventoryForecast {
   id: string;
@@ -213,7 +213,7 @@ export function InventoryForecastingAI() {
             forecasts.map((forecast) => {
               const urgency = getUrgencyLevel(forecast.days_until_stockout);
               const stockPercentage = forecast.product?.min_quantity
-                ? Math.min((forecast.current_quantity / forecast.product.min_quantity) * 100, 100)
+                ? Math.min(100, Math.max(0, (forecast.current_quantity / forecast.product.min_quantity) * 100))
                 : 50;
 
               return (
@@ -247,7 +247,7 @@ export function InventoryForecastingAI() {
                         <span className="text-sm font-medium">Current Stock Level</span>
                         <span className="text-sm text-muted-foreground">{stockPercentage.toFixed(0)}%</span>
                       </div>
-                      <Progress value={stockPercentage} className="h-2" />
+                      <SafeProgress value={stockPercentage} className="h-2" />
                     </div>
 
                     <ConfidenceBar confidence={forecast.confidence_score} label="Forecast Confidence" />

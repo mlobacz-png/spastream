@@ -35,8 +35,14 @@ export function ConfidenceBar({ label, confidence, animate = true }: ConfidenceB
     return <XCircle className="w-4 h-4 text-red-600" />;
   };
 
+  const getBorderColor = (value: number) => {
+    if (value >= 80) return 'border-green-200';
+    if (value >= 60) return 'border-yellow-200';
+    return 'border-red-200';
+  };
+
   return (
-    <div className={`p-4 rounded-xl ${colors.bg} border border-${colors.bar.split('-')[1]}-200`}>
+    <div className={`p-4 rounded-xl ${colors.bg} border ${getBorderColor(confidence)}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {getIcon(confidence)}

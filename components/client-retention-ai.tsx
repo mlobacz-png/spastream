@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase";
 import { Loader2, RefreshCw, AlertTriangle, TrendingUp, Users, Send, Phone, Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfidenceBar } from "./ai-confidence-bar";
+import { SafeProgress } from "./safe-progress";
 
 interface RetentionScore {
   id: string;
@@ -272,10 +272,10 @@ export function ClientRetentionAI() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Churn Risk Level</span>
-                          <span className="text-sm text-muted-foreground">{score.risk_score}%</span>
+                          <span className="text-sm text-muted-foreground">{Math.round(score.risk_score)}%</span>
                         </div>
-                        <Progress value={score.risk_score} className="h-2" />
-                        <ConfidenceBar confidence={100 - score.risk_score} label="Retention Confidence" />
+                        <SafeProgress value={score.risk_score} className="h-2" />
+                        <ConfidenceBar confidence={Math.min(100, Math.max(0, 100 - (score.risk_score || 0)))} label="Retention Confidence" />
                       </div>
 
                       <div className="grid grid-cols-3 gap-4 text-sm">

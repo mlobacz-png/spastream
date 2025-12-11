@@ -90,7 +90,7 @@ const features = [
   {
     icon: Sparkles,
     title: 'AI-Powered Suite',
-    description: '6 AI features: compliance auditor, pricing optimizer, no-show predictor, and more.',
+    description: '8 AI features: compliance auditor, retention analyzer, inventory forecasting, no-show predictor, treatment recommender, dynamic pricing, staff optimizer, and reputation booster.',
     color: 'from-violet-500 to-purple-500'
   }
 ];

@@ -60,7 +60,7 @@ export function VideoDemoModal() {
             <iframe
               width="100%"
               height="100%"
-              src="https://www.youtube.com/embed/oobVQaeFWls"
+              src="https://www.youtube.com/embed/cFDeB0Mx4Ao"
               title="SpaStream Demo"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

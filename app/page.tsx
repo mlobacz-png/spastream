@@ -3,30 +3,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Calendar,
-  Users,
-  DollarSign,
-  Package,
-  PackageOpen,
-  Mail,
-  Globe,
-  CreditCard,
-  FileText,
-  MessageSquare,
-  BarChart3,
-  Sparkles,
-  Check,
-  ArrowRight,
-  Shield,
-  Zap,
-  TrendingUp,
-  Clock,
-  Star,
-  CheckCircle2
-} from 'lucide-react';
+import { Calendar, Users, DollarSign, Package, PackageOpen, Mail, Globe, CreditCard, FileText, MessageSquare, ChartBar as BarChart3, Sparkles, Check, ArrowRight, Shield, Zap, TrendingUp, Clock, Star, CircleCheck as CheckCircle2, Play } from 'lucide-react';
 import Link from 'next/link';
 import { TrustIndicators, CustomerTestimonials, ComparisonTable, ROICalculator } from '@/components/landing-page-enhancements';
+import { VideoDemoModal } from '@/components/video-demo-modal';
 
 const features = [
   {
@@ -250,7 +230,7 @@ export default function Home() {
         <div className="container mx-auto text-center max-w-5xl">
           <Badge className="mb-6 bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0">
             <Zap className="w-3 h-3 mr-1" />
-            14-Day Free Trial • No Credit Card Required
+            14-Day Free Trial
           </Badge>
 
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-blue-800 to-slate-900 bg-clip-text text-transparent">
@@ -281,10 +261,6 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-8 text-sm text-slate-600">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <span>No credit card required</span>
-            </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <span>14-day free trial</span>
@@ -342,6 +318,23 @@ export default function Home() {
               </Card>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Demo Video Section - Updated */}
+      <section className="py-20 px-4 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-t-4 border-blue-500">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-blue-500/20 text-blue-300 border-blue-400/30">
+              <Play className="w-3 h-3 mr-1" />
+              Product Demo
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4 text-white">See SpaStream in Action</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              Watch a quick walkthrough of SpaStream's key features and see why hundreds of med spas trust our platform
+            </p>
+          </div>
+          <VideoDemoModal />
         </div>
       </section>
 
@@ -410,7 +403,7 @@ export default function Home() {
             </Badge>
             <h2 className="text-4xl font-bold mb-4">Choose Your Plan</h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Start with a 14-day free trial. No credit card required. Cancel anytime.
+              Start with a 14-day free trial. Cancel anytime.
             </p>
           </div>
 
